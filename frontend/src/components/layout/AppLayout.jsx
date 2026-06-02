@@ -6,11 +6,15 @@ const NAV = [
   { to: '/app/dashboard',        icon: 'ti-layout-dashboard', label: 'Dashboard' },
   { to: '/app/patient-scan',     icon: 'ti-user-search',      label: 'Hasta Tarama' },
   { to: '/app/academic-search',  icon: 'ti-search',           label: 'Literatür' },
+  { to: '/app/library',          icon: 'ti-books',            label: 'Kütüphane' },
+  { to: '/app/projects',         icon: 'ti-folder',           label: 'Projeler' },
   { to: '/app/data',             icon: 'ti-table',            label: 'Veri Girişi' },
   { to: '/app/statistics',       icon: 'ti-chart-bar',        label: 'İstatistik' },
   { to: '/app/figures',          icon: 'ti-chart-dots',       label: 'Figürler' },
+  { to: '/app/tables',           icon: 'ti-table-options',    label: 'Tablolar' },
   { to: '/app/writing',          icon: 'ti-pencil',           label: 'Yazım' },
   { to: '/app/reviewer',         icon: 'ti-message-check',    label: 'Reviewer' },
+  { to: '/app/records',          icon: 'ti-folder',           label: 'Kayıtlarım' },
 ]
 
 export default function AppLayout() {

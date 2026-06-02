@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store'
 
 const AGENTS = [
   { to: '/app/patient-scan',    icon: 'ti-user-search',   color: 'bg-brand-50 text-brand-600',   name: 'Hasta Tarama',    desc: 'Elasticsearch kohort tarama' },
-  { to: '/app/academic-search', icon: 'ti-search',        color: 'bg-blue-50 text-blue-700',     name: 'Literatür',       desc: 'Consensus MCP ile Q1-Q4' },
+  { to: '/app/academic-search', icon: 'ti-search',        color: 'bg-blue-50 text-blue-700',     name: 'Literatür',       desc: 'PubMed + Semantic Scholar' },
   { to: '/app/data',            icon: 'ti-table',         color: 'bg-green-50 text-green-700',   name: 'Veri Girişi',     desc: 'Excel import veya manuel' },
   { to: '/app/statistics',      icon: 'ti-chart-bar',     color: 'bg-purple-50 text-purple-700', name: 'İstatistik',      desc: 'Otomatik test seçimi' },
   { to: '/app/figures',         icon: 'ti-chart-dots',    color: 'bg-amber-50 text-amber-700',   name: 'Figürler',        desc: 'Publication-ready görseller' },

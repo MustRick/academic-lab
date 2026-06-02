@@ -6,6 +6,7 @@ export const OUTPUT_TYPES = {
   DATASET:      'dataset',
   STATISTICS:   'statistics',
   FIGURES:      'figures',
+  TABLES:       'tables',
   MANUSCRIPT:   'manuscript',
   REVIEWER:     'reviewer',
 }
@@ -22,18 +23,25 @@ export async function saveOutput({ type, title, query, payload, result, summary,
 }
 
 export async function updateOutput(id, updates) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Oturum açık değil.')
   const { data, error } = await supabase
     .from('research_outputs')
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id).select().single()
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select().single()
   if (error) throw error
   return data
 }
 
 export async function listOutputs(type, { projectId, limit = 50 } = {}) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Oturum açık değil.')
   let q = supabase
     .from('research_outputs')
     .select('id, title, query, summary, tags, is_pinned, created_at, updated_at, project_id')
+    .eq('user_id', user.id)
     .eq('type', type)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
@@ -44,20 +52,55 @@ export async function listOutputs(type, { projectId, limit = 50 } = {}) {
   return data || []
 }
 
+export async function listAllOutputs({ type, limit = 200 } = {}) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Oturum açık değil.')
+  let q = supabase
+    .from('research_outputs')
+    .select('id, title, type, query, summary, tags, is_pinned, created_at, updated_at, project_id')
+    .eq('user_id', user.id)
+    .order('is_pinned', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (type) q = q.eq('type', type)
+  const { data, error } = await q
+  if (error) throw error
+  return data || []
+}
+
 export async function getOutput(id) {
-  const { data, error } = await supabase.from('research_outputs').select('*').eq('id', id).single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Oturum açık değil.')
+  const { data, error } = await supabase
+    .from('research_outputs')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .single()
   if (error) throw error
   return data
 }
 
 export async function deleteOutput(id) {
-  const { error } = await supabase.from('research_outputs').delete().eq('id', id)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Oturum açık değil.')
+  const { error } = await supabase
+    .from('research_outputs')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
   if (error) throw error
 }
 
 export async function togglePin(id, current) {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Oturum açık değil.')
   const { data, error } = await supabase
-    .from('research_outputs').update({ is_pinned: !current }).eq('id', id).select('id, is_pinned').single()
+    .from('research_outputs')
+    .update({ is_pinned: !current })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select('id, is_pinned').single()
   if (error) throw error
   return data
 }

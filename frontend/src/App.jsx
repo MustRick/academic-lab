@@ -8,11 +8,15 @@ import Login, { Register } from '@/pages/Login'
 import Dashboard            from '@/pages/Dashboard'
 import PatientScan          from '@/pages/PatientScan'
 import AcademicSearch       from '@/pages/AcademicSearch'
+import Library              from '@/pages/Library'
+import Projects             from '@/pages/Projects'
 import DataEntry            from '@/pages/DataEntry'
 import Statistics           from '@/pages/Statistics'
 import Figures              from '@/pages/Figures'
+import Tables               from '@/pages/Tables'
 import Writing              from '@/pages/Writing'
 import Reviewer             from '@/pages/Reviewer'
+import Records              from '@/pages/Records'
 
 function AuthProvider({ children }) {
   const { setSession, status } = useAuthStore()
@@ -70,11 +74,16 @@ export default function App() {
             <Route path="dashboard"       element={<Dashboard />} />
             <Route path="patient-scan"    element={<PatientScan />} />
             <Route path="academic-search" element={<AcademicSearch />} />
+            <Route path="library"         element={<Library />} />
+            <Route path="projects"        element={<Projects />} />
+            <Route path="projects/:projectId" element={<Projects />} />
             <Route path="data"            element={<DataEntry />} />
             <Route path="statistics"      element={<Statistics />} />
             <Route path="figures"         element={<Figures />} />
+            <Route path="tables"          element={<Tables />} />
             <Route path="writing"         element={<Writing />} />
             <Route path="reviewer"        element={<Reviewer />} />
+            <Route path="records"         element={<Records />} />
           </Route>
           <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
         </Routes>

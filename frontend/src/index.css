@@ -29,3 +29,14 @@
   outline: none; color: #1a1a2e;
 }
 .cell-input:focus { background: #EEEDFE30; }
+
+@keyframes pulseGreen {
+  0%, 100% { background-color: rgba(240, 253, 244, 0.4); }
+  50%       { background-color: rgba(187, 247, 208, 0.6); }
+}
+@keyframes pulseRed {
+  0%, 100% { background-color: rgba(254, 242, 242, 0.2); }
+  50%       { background-color: rgba(254, 202, 202, 0.35); }
+}
+.animate-pulse-green { animation: pulseGreen 2.5s ease-in-out infinite; }
+.animate-pulse-red   { animation: pulseRed   2.5s ease-in-out infinite; }

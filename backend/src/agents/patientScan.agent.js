@@ -9,7 +9,8 @@ const llm = new ChatOpenAI({
   temperature: 0,
   apiKey: process.env.DEEPSEEK_API_KEY,
   configuration: {
-    baseURL: process.env.DEEPSEEK_BASE_URL
+    baseURL: process.env.DEEPSEEK_BASE_URL,
+    timeout: 30000
   }
 });
 
@@ -56,14 +57,14 @@ export async function run(input) {
 
   const shouldQueries = keywords.flatMap((keyword) => [
     // Exact + Turkish stemming
-    { match: { klinik_seyir_tedavi:       { query: keyword, operator: "or" } } },
-    { match: { "klinik_seyir_tedavi.kok": { query: keyword, operator: "or" } } },
-    { match: { yogun_bakim_notlari:       { query: keyword, operator: "or" } } },
-    { match: { "yogun_bakim_notlari.kok": { query: keyword, operator: "or" } } },
+    { match: { klinik_seyir:          { query: keyword, operator: "or" } } },
+    { match: { cocuk_yogun_bakim_notu: { query: keyword, operator: "or" } } },
+    { match: { all_clinical_text:      { query: keyword, operator: "or" } } },
 
     // Fuzzy: yazım hatası toleransı (ekstra/eksik harf, x↔ks karışımı)
-    { fuzzy: { klinik_seyir_tedavi: { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
-    { fuzzy: { yogun_bakim_notlari: { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
+    { fuzzy: { klinik_seyir:          { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
+    { fuzzy: { cocuk_yogun_bakim_notu: { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
+    { fuzzy: { all_clinical_text:      { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
   ]);
 
   const result = await elastic.search({
@@ -83,10 +84,9 @@ export async function run(input) {
     ],
     highlight: {
       fields: {
-        klinik_seyir_tedavi: {},
-        "klinik_seyir_tedavi.kok": {},
-        yogun_bakim_notlari: {},
-        "yogun_bakim_notlari.kok": {}
+        klinik_seyir: {},
+        cocuk_yogun_bakim_notu: {},
+        all_clinical_text: {}
       },
       fragment_size: 160,
       number_of_fragments: 1

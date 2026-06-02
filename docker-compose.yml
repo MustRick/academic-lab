@@ -11,6 +11,35 @@ services:
       - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\\|yellow\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: research-backend
+    ports:
+      - "5001:5001"
+    env_file:
+      - path: ./backend/.env
+        required: false
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_SUPABASE_URL
+        - VITE_SUPABASE_ANON_KEY
+    container_name: research-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   es_data:
