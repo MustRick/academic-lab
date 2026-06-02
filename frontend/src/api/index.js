@@ -66,10 +66,17 @@ export const projectAPI = {
   getProject: (projectId) => api.get(`/projects/${projectId}`),
   updateProject: (projectId, body) => api.patch(`/projects/${projectId}`, body),
   deleteProject: (projectId) => api.delete(`/projects/${projectId}`),
+  getContextPool: (projectId) => api.get(`/projects/${projectId}/context-pool`),
   listProjectArticles: (projectId) => api.get(`/projects/${projectId}/articles`),
   addArticleToProject: (projectId, articleId, body = {}) => api.post(`/projects/${projectId}/articles/${articleId}`, body),
   updateProjectArticle: (projectId, articleId, body = {}) => api.patch(`/projects/${projectId}/articles/${articleId}`, body),
-  removeArticleFromProject: (projectId, articleId) => api.delete(`/projects/${projectId}/articles/${articleId}`)
+  removeArticleFromProject: (projectId, articleId) => api.delete(`/projects/${projectId}/articles/${articleId}`),
+  attachResearchOutput: (projectId, outputId) => api.post(`/projects/${projectId}/research-outputs/${outputId}`),
+  detachResearchOutput: (projectId, outputId) => api.delete(`/projects/${projectId}/research-outputs/${outputId}`),
+  attachTable: (projectId, tableId) => api.post(`/projects/${projectId}/tables/${tableId}`),
+  detachTable: (projectId, tableId) => api.delete(`/projects/${projectId}/tables/${tableId}`),
+  attachFigure: (projectId, figureId) => api.post(`/projects/${projectId}/figures/${figureId}`),
+  detachFigure: (projectId, figureId) => api.delete(`/projects/${projectId}/figures/${figureId}`)
 }
 export const dataAPI = {
   createSchema: (studyDescription) => api.post('/academic/data', { mode: 'create', studyDescription }),
@@ -86,6 +93,25 @@ export const statisticsAPI = {
 export const figuresAPI  = { generate: (payload) => api.post('/academic/figures', payload) }
 export const tablesAPI   = { generate: (payload) => api.post('/academic/tables', payload) }
 export const writingAPI  = { generate: (body) => api.post('/academic/writing', body) }
+export const academicLabAPI = {
+  listProjects: () => api.get('/academic-lab/projects'),
+  listProjectArticles: (projectId) => api.get(`/academic-lab/projects/${projectId}/articles`),
+  listProjectStatistics: (projectId) => api.get(`/academic-lab/projects/${projectId}/statistics`),
+  listProjectResults: (projectId) => api.get(`/academic-lab/projects/${projectId}/results`),
+  getProjectSummary: (projectId) => api.get(`/academic-lab/projects/${projectId}/summary`),
+  getContextPool: (projectId) => api.get(`/projects/${projectId}/context-pool`),
+  createSession: (body = {}) => api.post('/academic-lab/council/session', body),
+  listSessions: () => api.get('/academic-lab/council/sessions'),
+  getSession: (sessionId) => api.get(`/academic-lab/council/session/${sessionId}`),
+  sendMessage: (sessionId, body = {}) => api.post(`/academic-lab/council/session/${sessionId}/message`, body),
+  startSession: (sessionId) => api.post(`/academic-lab/council/session/${sessionId}/start`),
+  runAgent: (sessionId, body = {}) => api.post(`/academic-lab/council/session/${sessionId}/run-agent`, body),
+  runFullManuscript: (sessionId, body = {}) => api.post(`/academic-lab/council/session/${sessionId}/run-full-manuscript`, body),
+  editorReview: (sessionId) => api.post(`/academic-lab/council/session/${sessionId}/editor-review`),
+  editorDecision: (sessionId, body = {}) => api.post(`/academic-lab/council/session/${sessionId}/editor-decision`, body),
+  finalizeSession: (sessionId) => api.post(`/academic-lab/council/session/${sessionId}/finalize`),
+  listSessionEvents: (sessionId) => api.get(`/academic-lab/council/session/${sessionId}/events`)
+}
 export const reviewerAPI = { analyze: (editorMail) => api.post('/academic/reviewer', { editorMail }) }
 
 export default api

@@ -40,11 +40,15 @@ CREATE TABLE IF NOT EXISTS public.projects (
   user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   title         TEXT NOT NULL,
   description   TEXT,
+  metadata      JSONB NOT NULL DEFAULT '{}'::jsonb,
   study_type    TEXT DEFAULT 'retrospektif',   -- rct, prospektif, vb.
   status        TEXT DEFAULT 'active',          -- active, completed, archived
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE public.projects
+  ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;
 
 -- ── 3. research_outputs — tüm agent çıktıları tek tablo ─────
 -- type: 'patient_scan' | 'literature' | 'dataset' | 'statistics'

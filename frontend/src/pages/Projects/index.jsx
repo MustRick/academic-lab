@@ -73,6 +73,57 @@ function ProjectModal({ open, title, initial, saving, onClose, onSave }) {
   )
 }
 
+const DETAIL_TABS = [
+  ['sources', 'Kaynaklar'],
+  ['datasets', 'Veri Setleri'],
+  ['statistics', 'İstatistikler'],
+  ['tables', 'Tablolar'],
+  ['figures', 'Figürler'],
+  ['metadata', 'Proje Bilgileri']
+]
+
+const METADATA_FIELDS = [
+  ['study_title', 'Çalışma başlığı', 'input'],
+  ['research_question', 'Araştırma sorusu', 'textarea'],
+  ['study_design', 'Çalışma tasarımı', 'input'],
+  ['center_type', 'Merkez tipi', 'input'],
+  ['retrospective_or_prospective', 'Retrospektif / prospektif', 'input'],
+  ['start_date', 'Başlangıç tarihi', 'date'],
+  ['end_date', 'Bitiş tarihi', 'date'],
+  ['ethics_committee_name', 'Etik kurul adı', 'input'],
+  ['ethics_approval_date', 'Etik kurul karar tarihi', 'date'],
+  ['ethics_approval_number', 'Etik kurul karar numarası', 'input'],
+  ['inclusion_criteria', 'Dahil edilme kriterleri', 'textarea'],
+  ['exclusion_criteria', 'Dışlanma kriterleri', 'textarea'],
+  ['primary_outcome', 'Birincil sonlanım', 'textarea'],
+  ['secondary_outcomes', 'İkincil sonlanımlar', 'textarea'],
+  ['notes', 'Notlar', 'textarea']
+]
+
+function OutputList({ items, empty, onDetach }) {
+  if (!items.length) {
+    return <EmptyState icon="ti-database" title="Kayıt yok" description={empty} />
+  }
+  return (
+    <div className="space-y-3">
+      {items.map(item => (
+        <div key={item.id} className="card">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-gray-900 leading-snug">{item.title}</h2>
+              {item.summary && <p className="text-sm text-gray-600 mt-1">{item.summary}</p>}
+              <p className="text-xs text-gray-400 mt-1">{new Date(item.created_at).toLocaleString('tr-TR')}</p>
+            </div>
+            <button className="btn-secondary text-xs text-red-600 hover:text-red-700" onClick={() => onDetach(item)}>
+              <i className="ti ti-unlink text-sm" />Projeden çıkar
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function ArticleEditModal({ open, article, saving, onClose, onSave }) {
   const [form, setForm] = useState({ notes: '', tags: '' })
 
@@ -125,6 +176,9 @@ export default function Projects() {
   const [projects, setProjects] = useState([])
   const [project, setProject] = useState(null)
   const [articles, setArticles] = useState([])
+  const [contextPool, setContextPool] = useState(null)
+  const [activeTab, setActiveTab] = useState('sources')
+  const [metadataForm, setMetadataForm] = useState({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [projectModal, setProjectModal] = useState({ open: false, project: null })
@@ -151,6 +205,9 @@ export default function Projects() {
       ])
       setProject(projectResponse.data)
       setArticles(articleResponse.data || [])
+      setMetadataForm(projectResponse.data?.metadata || {})
+      const poolResponse = await projectAPI.getContextPool(projectId)
+      setContextPool(poolResponse.data)
     } catch (e) {
       toast.error(e.message || 'Proje yüklenemedi.')
     } finally {
@@ -224,6 +281,32 @@ export default function Projects() {
     }
   }
 
+  const detachOutput = async (item, kind = 'research') => {
+    if (!window.confirm('Bu kaydı projeden çıkarmak istiyor musunuz?')) return
+    try {
+      if (kind === 'tables') await projectAPI.detachTable(projectId, item.id)
+      else if (kind === 'figures') await projectAPI.detachFigure(projectId, item.id)
+      else await projectAPI.detachResearchOutput(projectId, item.id)
+      toast.success('Kayıt projeden çıkarıldı.')
+      await loadProjectDetail()
+    } catch (e) {
+      toast.error(e.message || 'Kayıt projeden çıkarılamadı.')
+    }
+  }
+
+  const saveMetadata = async () => {
+    setSaving(true)
+    try {
+      await projectAPI.updateProject(projectId, { metadata: metadataForm })
+      toast.success('Proje bilgileri güncellendi.')
+      await loadProjectDetail()
+    } catch (e) {
+      toast.error(e.message || 'Proje bilgileri kaydedilemedi.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const handleDownloadRis = async () => {
     try {
       const result = await libraryAPI.downloadRis({ project_id: projectId })
@@ -266,15 +349,35 @@ export default function Projects() {
 
         {loading && <div className="flex items-center gap-2 text-sm text-gray-500"><Spinner size="sm" />Proje yükleniyor...</div>}
 
-        {!loading && articles.length === 0 && (
+        {!loading && contextPool && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-4">
+            <div className="card py-3"><div className="text-xs text-gray-500">Makale</div><div className="text-xl font-semibold">{contextPool.counts?.articles || 0}</div></div>
+            <div className="card py-3"><div className="text-xs text-gray-500">Veri seti</div><div className="text-xl font-semibold">{contextPool.counts?.datasets || 0}</div></div>
+            <div className="card py-3"><div className="text-xs text-gray-500">Analiz</div><div className="text-xl font-semibold">{contextPool.counts?.statistics || 0}</div></div>
+            <div className="card py-3"><div className="text-xs text-gray-500">Tablo</div><div className="text-xl font-semibold">{contextPool.counts?.tables || 0}</div></div>
+            <div className="card py-3"><div className="text-xs text-gray-500">Figür</div><div className="text-xl font-semibold">{contextPool.counts?.figures || 0}</div></div>
+          </div>
+        )}
+
+        {!loading && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {DETAIL_TABS.map(([id, label]) => (
+              <button key={id} className={activeTab === id ? 'btn-primary text-xs' : 'btn-secondary text-xs'} onClick={() => setActiveTab(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!loading && activeTab === 'sources' && articles.length === 0 && (
           <EmptyState
             icon="ti-folder"
             title="Bu projede makale yok"
-            description="Library sayfasından makaleleri projeye ekleyebilirsiniz."
+            description="Bu projeye bağlı kaynak bulunamadı. Önce Kütüphane bölümünden projeye makale ekleyin."
           />
         )}
 
-        {!loading && articles.length > 0 && (
+        {!loading && activeTab === 'sources' && articles.length > 0 && (
           <div className="space-y-3">
             {articles.map(article => (
               <div key={article.article_id} className="card">
@@ -329,6 +432,60 @@ export default function Projects() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {!loading && activeTab === 'datasets' && (
+          <OutputList
+            items={contextPool?.datasets || []}
+            empty="Bu projeye bağlı veri seti bulunamadı. Önce Veri Setleri bölümünde kayıt oluşturun veya mevcut sonucu projeye bağlayın."
+            onDetach={item => detachOutput(item)}
+          />
+        )}
+
+        {!loading && activeTab === 'statistics' && (
+          <OutputList
+            items={contextPool?.statistics || []}
+            empty="Bu projeye bağlı kayıtlı analiz sonucu bulunamadı. Önce İstatistik bölümünde analiz oluşturun veya mevcut sonucu projeye bağlayın."
+            onDetach={item => detachOutput(item)}
+          />
+        )}
+
+        {!loading && activeTab === 'tables' && (
+          <OutputList
+            items={contextPool?.tables || []}
+            empty="Bu projeye bağlı tablo bulunamadı. Önce Tablolar bölümünde bir tablo oluşturun veya mevcut tabloyu projeye bağlayın."
+            onDetach={item => detachOutput(item, 'tables')}
+          />
+        )}
+
+        {!loading && activeTab === 'figures' && (
+          <OutputList
+            items={contextPool?.figures || []}
+            empty="Bu projeye bağlı figür bulunamadı. Önce Figürler bölümünde bir figür oluşturun veya mevcut figürü projeye bağlayın."
+            onDetach={item => detachOutput(item, 'figures')}
+          />
+        )}
+
+        {!loading && activeTab === 'metadata' && (
+          <div className="card">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {METADATA_FIELDS.map(([key, label, kind]) => (
+                <div key={key} className={kind === 'textarea' ? 'md:col-span-2' : ''}>
+                  <label className="label">{label}</label>
+                  {kind === 'textarea' ? (
+                    <textarea className="input min-h-[84px]" value={metadataForm[key] || ''} onChange={e => setMetadataForm(prev => ({ ...prev, [key]: e.target.value }))} />
+                  ) : (
+                    <input className="input" type={kind === 'date' ? 'date' : 'text'} value={metadataForm[key] || ''} onChange={e => setMetadataForm(prev => ({ ...prev, [key]: e.target.value }))} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end mt-4">
+              <button className="btn-primary text-xs" onClick={saveMetadata} disabled={saving}>
+                {saving && <Spinner size="sm" />}Kaydet
+              </button>
+            </div>
           </div>
         )}
 

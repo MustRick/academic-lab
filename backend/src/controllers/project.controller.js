@@ -21,7 +21,9 @@ function sendError(res, err, label) {
       : err.message || 'İşlem tamamlanamadı.'
 
   console.error(`[project:${label}]`, err.message)
-  return res.status(status).json({ success: false, message })
+  const body = { success: false, code: err.code, message }
+  if (process.env.NODE_ENV !== 'production' && err.details) body.details = err.details
+  return res.status(status).json(body)
 }
 
 function normalizeBody(req) {
@@ -43,6 +45,14 @@ export const listProjects = async (req, res) => {
 
 export const createProject = async (req, res) => {
   try {
+    if (process.env.DEBUG_PROJECTS === 'true') {
+      console.log('[project:createProject:debug]', {
+        userId: req.user?.id || null,
+        userEmail: req.user?.email || null,
+        bodyKeys: Object.keys(req.body || {}),
+        body: req.body || {}
+      })
+    }
     const data = await projectService.createProject({
       token: token(req),
       userId: req.user.id,
@@ -151,5 +161,98 @@ export const updateProjectArticle = async (req, res) => {
     return res.json({ success: true, data })
   } catch (err) {
     return sendError(res, err, 'updateProjectArticle')
+  }
+}
+
+export const getContextPool = async (req, res) => {
+  try {
+    if (!validateUuidParam(res, req.params.projectId, 'Proje ID')) return
+    const data = await projectService.getContextPool({
+      token: token(req),
+      projectId: req.params.projectId
+    })
+    return res.json({ success: true, data })
+  } catch (err) {
+    return sendError(res, err, 'getContextPool')
+  }
+}
+
+function allowedTypesForKind(kind) {
+  if (kind === 'tables') return ['tables']
+  if (kind === 'figures') return ['figures']
+  return ['patient_scan', 'literature', 'dataset', 'statistics', 'tables', 'figures', 'manuscript', 'reviewer']
+}
+
+async function attachOutput(req, res, kind = 'research_outputs') {
+  if (!validateUuidParam(res, req.params.projectId, 'Proje ID')) return
+  const outputId = req.params.outputId || req.params.tableId || req.params.figureId
+  if (!validateUuidParam(res, outputId, 'Çıktı ID')) return
+  const data = await projectService.attachResearchOutputToProject({
+    token: token(req),
+    projectId: req.params.projectId,
+    outputId,
+    allowedTypes: allowedTypesForKind(kind)
+  })
+  return res.status(201).json({ success: true, data })
+}
+
+async function detachOutput(req, res, kind = 'research_outputs') {
+  if (!validateUuidParam(res, req.params.projectId, 'Proje ID')) return
+  const outputId = req.params.outputId || req.params.tableId || req.params.figureId
+  if (!validateUuidParam(res, outputId, 'Çıktı ID')) return
+  const data = await projectService.detachResearchOutputFromProject({
+    token: token(req),
+    projectId: req.params.projectId,
+    outputId,
+    allowedTypes: allowedTypesForKind(kind)
+  })
+  return res.json({ success: true, data })
+}
+
+export const attachResearchOutput = async (req, res) => {
+  try {
+    return attachOutput(req, res, 'research_outputs')
+  } catch (err) {
+    return sendError(res, err, 'attachResearchOutput')
+  }
+}
+
+export const detachResearchOutput = async (req, res) => {
+  try {
+    return detachOutput(req, res, 'research_outputs')
+  } catch (err) {
+    return sendError(res, err, 'detachResearchOutput')
+  }
+}
+
+export const attachTable = async (req, res) => {
+  try {
+    return attachOutput(req, res, 'tables')
+  } catch (err) {
+    return sendError(res, err, 'attachTable')
+  }
+}
+
+export const detachTable = async (req, res) => {
+  try {
+    return detachOutput(req, res, 'tables')
+  } catch (err) {
+    return sendError(res, err, 'detachTable')
+  }
+}
+
+export const attachFigure = async (req, res) => {
+  try {
+    return attachOutput(req, res, 'figures')
+  } catch (err) {
+    return sendError(res, err, 'attachFigure')
+  }
+}
+
+export const detachFigure = async (req, res) => {
+  try {
+    return detachOutput(req, res, 'figures')
+  } catch (err) {
+    return sendError(res, err, 'detachFigure')
   }
 }

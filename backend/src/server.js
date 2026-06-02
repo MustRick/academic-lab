@@ -5,6 +5,7 @@ import academicRoutes from './routes/academic.routes.js'
 import authRoutes from './routes/auth.routes.js'
 import libraryRoutes from './routes/library.routes.js'
 import projectRoutes from './routes/project.routes.js'
+import academicLabRoutes from './routes/academicLab.routes.js'
 
 const app = express()
 const port = process.env.PORT || 5001
@@ -20,6 +21,7 @@ app.use('/api/academic', academicRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/library', libraryRoutes)
 app.use('/api', projectRoutes)
+app.use('/api/academic-lab', academicLabRoutes)
 
 const server = app.listen(port, () => {
   console.log(`Backend http://localhost:${port} adresinde calisiyor`)

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { saveOutput, listOutputs, getOutput, deleteOutput, togglePin } from '@/lib/outputs'
 import { Modal } from '@/components/ui'
+import { projectAPI } from '@/api'
 import toast from 'react-hot-toast'
 
 export function SaveBar({ type, title: defaultTitle, query, payload, result, summary, disabled, onSaved }) {
@@ -8,14 +9,24 @@ export function SaveBar({ type, title: defaultTitle, query, payload, result, sum
   const [saved, setSaved]   = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [customTitle, setCustomTitle] = useState('')
+  const [projects, setProjects] = useState([])
+  const [projectId, setProjectId] = useState('')
 
   useEffect(() => { setSaved(false) }, [result])
+  useEffect(() => {
+    if (!showModal) return
+    projectAPI.listProjects().then(res => {
+      const list = res.data || []
+      setProjects(list)
+      setProjectId(prev => prev || list[0]?.id || '')
+    }).catch(() => setProjects([]))
+  }, [showModal])
 
   const handleSave = async () => {
     const title = customTitle.trim() || defaultTitle || query?.slice(0, 60) || 'Kayıt'
     setSaving(true)
     try {
-      const record = await saveOutput({ type, title, query, payload, result, summary })
+      const record = await saveOutput({ type, title, query, payload, result, summary, projectId })
       setSaved(true)
       setShowModal(false)
       toast.success(`"${title}" kaydedildi`)
@@ -52,6 +63,11 @@ export function SaveBar({ type, title: defaultTitle, query, payload, result, sum
           placeholder={defaultTitle || query?.slice(0, 60) || 'Başlık girin...'}
           autoFocus onKeyDown={e => { if (e.key === 'Enter') handleSave() }} />
         <p className="text-xs text-gray-400 mb-4">Boş bırakırsanız otomatik oluşturulur</p>
+        <label className="label">Proje</label>
+        <select className="input mb-4" value={projectId} onChange={e => setProjectId(e.target.value)}>
+          <option value="">Proje seçin</option>
+          {projects.map(project => <option key={project.id} value={project.id}>{project.title}</option>)}
+        </select>
         {summary && (
           <div className="bg-gray-50 rounded-lg p-3 mb-4">
             <div className="text-xs text-gray-400 mb-1">Özet</div>
@@ -60,7 +76,7 @@ export function SaveBar({ type, title: defaultTitle, query, payload, result, sum
         )}
         <div className="flex gap-2 justify-end">
           <button className="btn-secondary" onClick={() => setShowModal(false)}>İptal</button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+          <button className="btn-primary" onClick={handleSave} disabled={saving || !projectId}>
             <i className="ti ti-device-floppy text-sm" />{saving ? 'Kaydediliyor...' : 'Kaydet'}
           </button>
         </div>

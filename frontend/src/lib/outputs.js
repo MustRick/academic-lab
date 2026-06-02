@@ -14,9 +14,14 @@ export const OUTPUT_TYPES = {
 export async function saveOutput({ type, title, query, payload, result, summary, projectId, tags = [] }) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Oturum açık değil.')
+  if (!projectId) {
+    const err = new Error('Çıktıyı kaydetmeden önce bir proje seçmelisiniz.')
+    err.code = 'PROJECT_ID_REQUIRED'
+    throw err
+  }
   const { data, error } = await supabase
     .from('research_outputs')
-    .insert({ user_id: user.id, project_id: projectId || null, type, title, query: query || null, payload: payload || {}, result: result || {}, summary: summary || null, tags })
+    .insert({ user_id: user.id, project_id: projectId, type, title, query: query || null, payload: payload || {}, result: result || {}, summary: summary || null, tags })
     .select().single()
   if (error) throw error
   return data

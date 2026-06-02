@@ -14,6 +14,7 @@ function normalizeTags(tags) {
 function normalizeProject(row, countMap = new Map()) {
   return {
     ...row,
+    metadata: row.metadata || {},
     article_count: countMap.get(row.id) || 0
   }
 }
@@ -50,7 +51,7 @@ export async function listProjects({ token }) {
   const db = scopedSupabase(token)
   const { data, error } = await db
     .from('projects')
-    .select('id,user_id,title,description,created_at,updated_at')
+    .select('id,user_id,title,description,metadata,created_at,updated_at')
     .order('created_at', { ascending: false })
 
   if (error) throw error
@@ -61,12 +62,22 @@ export async function listProjects({ token }) {
 
 export async function createProject({ token, userId, input = {} }) {
   const db = scopedSupabase(token)
-  const title = blankToNull(input.title)
+  const title = blankToNull(input.title ?? input.name)
   const description = blankToNull(input.description)
+
+  if (!userId) {
+    const err = new Error('Kimlik doğrulama bilgisi içinde user_id bulunamadı.')
+    err.status = 401
+    err.code = 'USER_ID_REQUIRED'
+    err.details = { inputKeys: Object.keys(input || {}) }
+    throw err
+  }
 
   if (!title) {
     const err = new Error('Proje adı boş olamaz.')
     err.status = 400
+    err.code = 'PROJECT_TITLE_REQUIRED'
+    err.details = { inputKeys: Object.keys(input || {}) }
     throw err
   }
 
@@ -79,11 +90,19 @@ export async function createProject({ token, userId, input = {} }) {
 
   const { data, error } = await db
     .from('projects')
-    .insert({ user_id: userId, title, description })
-    .select('id,user_id,title,description,created_at,updated_at')
+    .insert({ user_id: userId, title, description, metadata: input.metadata || {} })
+    .select('id,user_id,title,description,metadata,created_at,updated_at')
     .single()
 
-  if (error) throw error
+  if (error) {
+    error.details = {
+      ...(error.details ? { supabaseDetails: error.details } : {}),
+      userId,
+      inputKeys: Object.keys(input || {}),
+      titlePresent: Boolean(title)
+    }
+    throw error
+  }
   return normalizeProject(data)
 }
 
@@ -91,7 +110,7 @@ export async function getProject({ token, projectId }) {
   const db = scopedSupabase(token)
   const { data, error } = await db
     .from('projects')
-    .select('id,user_id,title,description,created_at,updated_at')
+    .select('id,user_id,title,description,metadata,created_at,updated_at')
     .eq('id', projectId)
     .single()
 
@@ -124,6 +143,11 @@ export async function updateProject({ token, projectId, input = {} }) {
   }
 
   if (input.description !== undefined) patch.description = blankToNull(input.description)
+  if (input.metadata !== undefined) {
+    patch.metadata = input.metadata && typeof input.metadata === 'object' && !Array.isArray(input.metadata)
+      ? input.metadata
+      : {}
+  }
 
   if (Object.keys(patch).length === 0) {
     return getProject({ token, projectId })
@@ -133,7 +157,7 @@ export async function updateProject({ token, projectId, input = {} }) {
     .from('projects')
     .update(patch)
     .eq('id', projectId)
-    .select('id,user_id,title,description,created_at,updated_at')
+    .select('id,user_id,title,description,metadata,created_at,updated_at')
     .single()
 
   if (error) throw error
@@ -265,4 +289,119 @@ export async function listProjectArticles({ token, projectId }) {
     created_at: row.created_at,
     updated_at: row.updated_at
   }))
+}
+
+function normalizeOutput(row = {}) {
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    query: row.query,
+    summary: row.summary,
+    payload: row.payload || {},
+    result: row.result || {},
+    tags: row.tags || [],
+    project_id: row.project_id || null,
+    created_at: row.created_at,
+    updated_at: row.updated_at
+  }
+}
+
+async function assertProject(db, projectId) {
+  const { data, error } = await db
+    .from('projects')
+    .select('id,user_id,title,description,metadata,created_at,updated_at')
+    .eq('id', projectId)
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function listProjectOutputs({ token, projectId, type }) {
+  const db = scopedSupabase(token)
+  await assertProject(db, projectId)
+  const { data, error } = await db
+    .from('research_outputs')
+    .select('id,type,title,query,summary,payload,result,tags,project_id,created_at,updated_at')
+    .eq('project_id', projectId)
+    .eq('type', type)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data || []).map(normalizeOutput)
+}
+
+export async function getContextPool({ token, projectId }) {
+  const db = scopedSupabase(token)
+  const project = await assertProject(db, projectId)
+  const [articles, outputsResult] = await Promise.all([
+    listProjectArticles({ token, projectId }),
+    db
+      .from('research_outputs')
+      .select('id,type,title,query,summary,payload,result,tags,project_id,created_at,updated_at')
+      .eq('project_id', projectId)
+      .in('type', ['dataset', 'statistics', 'tables', 'figures'])
+      .order('created_at', { ascending: false })
+  ])
+  if (outputsResult.error) throw outputsResult.error
+
+  const outputs = (outputsResult.data || []).map(normalizeOutput)
+  const datasets = outputs.filter(item => item.type === 'dataset')
+  const statistics = outputs.filter(item => item.type === 'statistics')
+  const tables = outputs.filter(item => item.type === 'tables')
+  const figures = outputs.filter(item => item.type === 'figures')
+
+  return {
+    project: normalizeProject(project),
+    counts: {
+      articles: articles.length,
+      datasets: datasets.length,
+      statistics: statistics.length,
+      tables: tables.length,
+      figures: figures.length
+    },
+    articles,
+    datasets,
+    statistics,
+    tables,
+    figures
+  }
+}
+
+export async function attachResearchOutputToProject({ token, projectId, outputId, allowedTypes = null }) {
+  const db = scopedSupabase(token)
+  const project = await assertProject(db, projectId)
+  let query = db
+    .from('research_outputs')
+    .update({ project_id: projectId })
+    .eq('id', outputId)
+    .eq('user_id', project.user_id)
+
+  if (allowedTypes?.length) query = query.in('type', allowedTypes)
+
+  const { data, error } = await query
+    .select('id,type,title,query,summary,payload,result,tags,project_id,created_at,updated_at')
+    .single()
+
+  if (error) throw error
+  return normalizeOutput(data)
+}
+
+export async function detachResearchOutputFromProject({ token, projectId, outputId, allowedTypes = null }) {
+  const db = scopedSupabase(token)
+  const project = await assertProject(db, projectId)
+  let query = db
+    .from('research_outputs')
+    .update({ project_id: null })
+    .eq('id', outputId)
+    .eq('project_id', projectId)
+    .eq('user_id', project.user_id)
+
+  if (allowedTypes?.length) query = query.in('type', allowedTypes)
+
+  const { data, error } = await query
+    .select('id,type,title,query,summary,payload,result,tags,project_id,created_at,updated_at')
+    .single()
+
+  if (error) throw error
+  return normalizeOutput(data)
 }

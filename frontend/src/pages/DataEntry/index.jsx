@@ -1,5 +1,5 @@
-import { useState, useRef, useMemo } from 'react'
-import { dataAPI } from '@/api'
+import { useEffect, useState, useRef, useMemo } from 'react'
+import { dataAPI, projectAPI } from '@/api'
 import { useDataStore } from '@/store'
 import { PageHeader, AgentRunning, Modal } from '@/components/ui'
 import { OutputSelector, SavedBadge } from '@/components/ui/SaveBar'
@@ -85,6 +85,8 @@ export default function DataEntry() {
   const [savedId, setSavedId]         = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveTitle, setSaveTitle]       = useState('')
+  const [projects, setProjects] = useState([])
+  const [saveProjectId, setSaveProjectId] = useState('')
   const fileRef = useRef()
 
   const editingColumn = editCol !== null && schema ? schema.columns[editCol] : null
@@ -92,6 +94,14 @@ export default function DataEntry() {
   const editIncompatibleCount = editingColumn
     ? incompatibleValueCount(schema.rows, editingColumn.key, newVar.type, parsedNewCategories)
     : 0
+
+  useEffect(() => {
+    projectAPI.listProjects().then(res => {
+      const list = res.data || []
+      setProjects(list)
+      setSaveProjectId(prev => prev || list[0]?.id || '')
+    }).catch(() => setProjects([]))
+  }, [])
 
   const handleAISchema = async () => {
     if (!studyDesc.trim()) return
@@ -188,7 +198,7 @@ export default function DataEntry() {
         record = await updateOutput(savedId, { payload: meta, result: meta, summary: `${schema.rows.length} satır, ${schema.columns.length} değişken` })
         toast.success(`"${finalTitle}" güncellendi`)
       } else {
-        record = await saveOutput({ type: OUTPUT_TYPES.DATASET, title: finalTitle, query: finalTitle, payload: meta, result: meta, summary: `${schema.rows.length} satır, ${schema.columns.length} değişken` })
+        record = await saveOutput({ type: OUTPUT_TYPES.DATASET, title: finalTitle, query: finalTitle, payload: meta, result: meta, summary: `${schema.rows.length} satır, ${schema.columns.length} değişken`, projectId: saveProjectId })
         setSavedId(record.id)
         // Schema'yı da güncelle
         setSchema({ ...schema, studyTitle: finalTitle })
@@ -575,9 +585,14 @@ export default function DataEntry() {
         <p className="text-xs text-gray-400 mb-4">
           Bu isimle İstatistik sayfasındaki dataset seçicide görünür
         </p>
+        <label className="label">Proje</label>
+        <select className="input mb-4" value={saveProjectId} onChange={e => setSaveProjectId(e.target.value)}>
+          <option value="">Proje seçin</option>
+          {projects.map(project => <option key={project.id} value={project.id}>{project.title}</option>)}
+        </select>
         <div className="flex gap-2 justify-end">
           <button className="btn-secondary" onClick={() => setShowSaveModal(false)}>İptal</button>
-          <button className="btn-primary" onClick={() => handleSaveConfirm()} disabled={!saveTitle.trim()}>
+          <button className="btn-primary" onClick={() => handleSaveConfirm()} disabled={!saveTitle.trim() || !saveProjectId}>
             <i className="ti ti-device-floppy text-sm" />Kaydet
           </button>
         </div>
