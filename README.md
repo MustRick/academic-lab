@@ -1,5 +1,8 @@
 # PICU Research Platform
 
+<img width="1512" height="858" alt="image" src="https://github.com/user-attachments/assets/260d63a6-f848-458c-b6e8-a857e4237ea7" />
+
+
 A full-stack clinical research platform for pediatric intensive care. Combines patient data management with AI-powered academic search, statistical analysis, and scientific writing tools — all in one interface.
 
 ## Features
@@ -25,6 +28,8 @@ A full-stack clinical research platform for pediatric intensive care. Combines p
 **Database** — Supabase (PostgreSQL + Auth)  
 **Search** — Elasticsearch 8.13  
 **AI** — OpenAI GPT, DeepSeek, Consensus API, Brave Search
+
+<img width="1512" height="858" alt="image" src="https://github.com/user-attachments/assets/3680a276-56e1-41cd-8783-361fc5e1a96c" />
 
 ## Architecture
 
