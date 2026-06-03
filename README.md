@@ -42,7 +42,6 @@ browser → Nginx :3000 → React SPA
 ```
 <img width="1512" height="858" alt="image" src="https://github.com/user-attachments/assets/a4a016ca-bec6-4224-93f2-01fd74bc325b" />
 
-<img width="1512" height="858" alt="image" src="https://github.com/user-attachments/assets/0e2e051a-0450-44a3-91f8-76a66dd6052a" />
 
 ## Getting Started
 
