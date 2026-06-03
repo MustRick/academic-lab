@@ -56,15 +56,14 @@ export async function run(input) {
   }
 
   const shouldQueries = keywords.flatMap((keyword) => [
-    // Exact + Turkish stemming
-    { match: { klinik_seyir:          { query: keyword, operator: "or" } } },
-    { match: { cocuk_yogun_bakim_notu: { query: keyword, operator: "or" } } },
-    { match: { all_clinical_text:      { query: keyword, operator: "or" } } },
+    { match: { klinik_seyir_tedavi: { query: keyword, operator: "or" } } },
+    { match: { yogun_bakim_notlari: { query: keyword, operator: "or" } } },
+    { match: { tum_metin:           { query: keyword, operator: "or" } } },
 
-    // Fuzzy: yazım hatası toleransı (ekstra/eksik harf, x↔ks karışımı)
-    { fuzzy: { klinik_seyir:          { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
-    { fuzzy: { cocuk_yogun_bakim_notu: { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
-    { fuzzy: { all_clinical_text:      { value: keyword, fuzziness: "AUTO", prefix_length: 3 } } },
+    // Turkish stemming variants
+    { match: { "klinik_seyir_tedavi.kok": { query: keyword, operator: "or" } } },
+    { match: { "yogun_bakim_notlari.kok": { query: keyword, operator: "or" } } },
+    { match: { "tum_metin.kok":           { query: keyword, operator: "or" } } },
   ]);
 
   const result = await elastic.search({
@@ -84,9 +83,9 @@ export async function run(input) {
     ],
     highlight: {
       fields: {
-        klinik_seyir: {},
-        cocuk_yogun_bakim_notu: {},
-        all_clinical_text: {}
+        klinik_seyir_tedavi: {},
+        yogun_bakim_notlari: {},
+        tum_metin: {}
       },
       fragment_size: 160,
       number_of_fragments: 1
